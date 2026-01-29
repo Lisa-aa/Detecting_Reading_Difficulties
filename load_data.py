@@ -172,10 +172,10 @@ def get_data_per_cat(type, cat, place,corrected=False,size=85,model="Res",cat2=F
                 with open(f"participant_data\\{folder}\\{type}_{participant}\\{file}") as f:
                     first_line = f.readline()
                     second_line = f.readline()
-                    this_cat = second_line.split(",")[place].strip()
+                    this_cat = int(second_line.split(",")[place].strip())
                 if cat == this_cat:
                     if not cat2 == False:
-                        this_cat2 = second_line.split(",")[place2].strip()
+                        this_cat2 = int(second_line.split(",")[place2].strip())
                         if cat2 == this_cat2:
                             X_train.append(counter)
                     else:
@@ -192,10 +192,10 @@ def get_data_per_cat(type, cat, place,corrected=False,size=85,model="Res",cat2=F
             with open(f"participant_data\\{folder}\\{type}_{participant}\\{file}") as f:
                     first_line = f.readline()
                     second_line = f.readline()
-                    this_cat = second_line.split(",")[place].strip()
+                    this_cat = int(second_line.split(",")[place].strip())
             if cat == this_cat:
                 if not cat2 == False:
-                    this_cat2 = second_line.split(",")[place2].strip()
+                    this_cat2 = int(second_line.split(",")[place2].strip())
                     if cat2 == this_cat2:
                         X_dev.append(counter)
                 else:
@@ -212,10 +212,10 @@ def get_data_per_cat(type, cat, place,corrected=False,size=85,model="Res",cat2=F
             with open(f"participant_data\\{folder}\\{type}_{participant}\\{file}") as f:
                     first_line = f.readline()
                     second_line = f.readline()
-                    this_cat = second_line.split(",")[place].strip()
+                    this_cat = int(second_line.split(",")[place].strip())
             if cat == this_cat:
                 if not cat2 == False:
-                    this_cat2 = second_line.split(",")[place2].strip()
+                    this_cat2 = int(second_line.split(",")[place2].strip())
                     if cat2 == this_cat2:
                         X_test.append(counter)
                 else:
@@ -223,6 +223,78 @@ def get_data_per_cat(type, cat, place,corrected=False,size=85,model="Res",cat2=F
             counter += 1
     # Get all data
     _, train, dev, test, y_train, y_dev, y_test = get_all_data(type, corrected,size=size, model=model)
+    # Select positions for the specified category and return
+    return train[X_train], dev[X_dev], test[X_test], y_train[X_train], y_dev[X_dev], y_test[X_test]
+
+
+def get_data_per_cat_pp(xfolder, yfolder, cat, place,size=85,model="Res",cat2=False, place2=False):
+    """
+    Creates a dataset containing only samples of a specific category of a single participant.
+
+    :param xfolder: The folder where the data is stored.
+    :param yfolder: The file where the labels are stored.
+    :param cat: The category to collect data for.
+    :param place: The index of the category in the data.
+    :param size: Amount of features in the data to collect.
+    :param model: Collect for ResNet50 or AlexNet, because the require a different minimum of timesteps.
+    :param cat2: Optional, second category to filter on.
+    :param place2: Optional, index of the second category in the data.
+
+    :return: train, dev, test, y_train, y_dev, y_test
+
+    Can also be used to get data per another feature, does not have to be category. Just give the value of the feature and the place to cat and place.
+    """
+    # Determine which data should be test, dev and train based on participant number
+    X_train = []
+    counter = 0
+    # Go through all data and determine positions for the specified category for train
+    for file in os.listdir(f"{xfolder}_train"):
+        with open(f"{xfolder}_train\\{file}") as f:
+            first_line = f.readline()
+            second_line = f.readline()
+            this_cat = int(second_line.split(",")[place].strip())
+        if cat == this_cat:
+            if not cat2 == False:
+                this_cat2 = int(second_line.split(",")[place2].strip())
+                if cat2 == this_cat2:
+                    X_train.append(counter)
+            else:
+                X_train.append(counter)
+        counter += 1
+    # Now for dev
+    X_dev = []
+    counter = 0
+    for file in os.listdir(f"{xfolder}_dev"):
+        with open(f"{xfolder}_dev\\{file}") as f:
+            first_line = f.readline()
+            second_line = f.readline()
+            this_cat = int(second_line.split(",")[place].strip())
+        if cat == this_cat:
+            if not cat2 == False:
+                this_cat2 = int(second_line.split(",")[place2].strip())
+                if cat2 == this_cat2:
+                    X_dev.append(counter)
+            else:
+                X_dev.append(counter)
+        counter += 1
+    # Now for test
+    X_test = []
+    counter = 0
+    for file in os.listdir(f"{xfolder}_test"):
+        with open(f"{xfolder}_test\\{file}") as f:
+                first_line = f.readline()
+                second_line = f.readline()
+                this_cat = int(second_line.split(",")[place].strip())
+        if cat == this_cat:
+            if not cat2 == False:
+                this_cat2 = int(second_line.split(",")[place2].strip())
+                if cat2 == this_cat2:
+                    X_test.append(counter)
+            else:
+                X_test.append(counter)
+        counter += 1
+    # Get all data
+    _, train, dev, test, y_train, y_dev, y_test = get_data(xfolder, yfolder,size=size, model=model)
     # Select positions for the specified category and return
     return train[X_train], dev[X_dev], test[X_test], y_train[X_train], y_dev[X_dev], y_test[X_test]
 
@@ -546,3 +618,6 @@ def get_all_data(type, corrected = False, size=85, model="Res", shap=False):
             train, dev, test, y_train, y_dev, y_test = feature_select_resample(train, dev, test, y_train, y_dev, y_test, model=model)
             train_data = DataLoader(TensorDataset(train, y_train), batch_size=50, shuffle=True)
             return train_data, train, dev, test, y_train, y_dev, y_test
+    return [], train, dev, test, y_train, y_dev, y_test
+    
+    

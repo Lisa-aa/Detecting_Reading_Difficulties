@@ -373,7 +373,7 @@ def test_cnn_ens():
     Test all ensemble models on all featuresets on both CNNs.
     :return: None, but prints the f1 score and accuracy of each ensemble model.
     """
-    for model in [AlexNet1D, ResNet50_1D]: 
+    for model in [AlexNet1D,ResNet50_1D]: 
         f1_scores = []
         accuracies = []
         if model == ResNet50_1D:
@@ -396,14 +396,14 @@ def test_cnn_ens():
         model_audio.load_state_dict(state_dict)
         model_audio.eval()
         # Load ensemble model
-        model_location = f"ensemble\ensemble_model_{model_name}.pkl"
+        model_location = f"ensemble_all_data\ensemble_model_{model_name}.pkl"
         model_ens = pkl.load(open(model_location,"rb"))
         print(model_ens)
         
         # Get the different kinds of data of participants
-        _,train_eye, _,test_eye, y_train, _,y_test = get_all_data("all_eye_features", True, 7, model=model_name[:3])
-        _,train_pupil, _, test_pupil, _,_,_ = get_all_data("all_pupil_features", True, 6, model=model_name[:3])
-        _,train_audio, _,test_audio,_ ,_, _ = get_all_data("all_audio_Features", True,78, model=model_name[:3])
+        _,train_eye, dev_eye ,test_eye, y_train, y_dev,y_test = get_all_data("all_eye_features", True, 7, model=model_name[:3])
+        _,train_pupil, dev_pupil, test_pupil, _,_,_ = get_all_data("all_pupil_features", True, 6, model=model_name[:3])
+        _,train_audio, dev_audio,test_audio,_ ,_, _ = get_all_data("all_audio_Features", True,78, model=model_name[:3])
         # run all models on the test data.
         output_eye = model_eye(test_eye)
         output_pupil = model_pupil(test_pupil)
@@ -416,8 +416,36 @@ def test_cnn_ens():
         f1_scores.append(f1)
         accuracies.append(acc)
         # Print results for the per participant models per feature set and CNN type
-        print(f"F1 score {model_name} on ensemble: {np.mean(f1_scores)}")
-        print(f"Accuracy {model_name} on ensemble: {np.mean(accuracies)}")
+        print(f"F1 score {model_name} on ensemble, test: {np.mean(f1_scores)}")
+        print(f"Accuracy {model_name} on ensemble, test: {np.mean(accuracies)}")
+        # run all models on the dev data.
+        output_eye = model_eye(dev_eye)
+        output_pupil = model_pupil(dev_pupil)
+        output_audio = model_audio(dev_audio)
+        xtest_new = torch.stack((output_eye, output_pupil, output_audio),dim=1)
+        xtest_new = torch.nan_to_num(xtest_new, nan=0)
+        outputs_model = model_ens.predict(xtest_new.reshape(xtest_new.shape[0], -1).detach().numpy())
+        f1 = f1_score(torch.Tensor(y_dev),outputs_model)
+        acc = accuracy_score(torch.Tensor(y_dev),outputs_model)
+        f1_scores.append(f1)
+        accuracies.append(acc)
+        # Print results for the per participant models per feature set and CNN type
+        print(f"F1 score {model_name} on ensemble, dev: {np.mean(f1_scores)}")
+        print(f"Accuracy {model_name} on ensemble, dev: {np.mean(accuracies)}")
+        # run all models on the train data.
+        output_eye = model_eye(train_eye)
+        output_pupil = model_pupil(train_pupil)
+        output_audio = model_audio(train_audio)
+        xtest_new = torch.stack((output_eye, output_pupil, output_audio),dim=1)
+        xtest_new = torch.nan_to_num(xtest_new, nan=0)
+        outputs_model = model_ens.predict(xtest_new.reshape(xtest_new.shape[0], -1).detach().numpy())
+        f1 = f1_score(torch.Tensor(y_train),outputs_model)
+        acc = accuracy_score(torch.Tensor(y_train),outputs_model)
+        f1_scores.append(f1)
+        accuracies.append(acc)
+        # Print results for the per participant models per feature set and CNN type
+        print(f"F1 score {model_name} on ensemble, train: {np.mean(f1_scores)}")
+        print(f"Accuracy {model_name} on ensemble, train: {np.mean(accuracies)}")
     return np.mean(f1_scores), np.mean(accuracies)
 
 def test_svm_pp_ens():
